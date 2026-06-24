@@ -4,10 +4,22 @@
 export const STORAGE_KEYS = {
   campaignInterests: "wasl-dam:campaign-interests",
   donorReadiness: "wasl-dam:donor-readiness",
+  reports: "wasl-dam:reports",
   adminCampaigns: "wasl-dam:admin-campaigns",
   adminCenters: "wasl-dam:admin-centers",
   adminDemand: "wasl-dam:admin-demand",
 } as const;
+
+// كل مفاتيح التخزين المحلية للنموذج التجريبي (تُستخدم في حذف البيانات المحلية)
+export const ALL_STORAGE_KEYS: string[] = [
+  "wasl-dam:campaign-interests",
+  "wasl-dam:donor-readiness",
+  "wasl-dam:reports",
+  "wasl-dam:admin-campaigns",
+  "wasl-dam:admin-centers",
+  "wasl-dam:admin-demand",
+  "wasl-dam:theme",
+];
 
 export function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;

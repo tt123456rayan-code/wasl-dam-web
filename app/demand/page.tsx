@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PageHeader, DemoBadge, DemandBadge } from "@/components/ui";
+import { PageHeader, DemoBadge, DemandBadge, EmptyState, EmergencyNotice } from "@/components/ui";
 import { demandByGovernorate, demandLastUpdated } from "@/data/demand";
-import { BLOOD_TYPES } from "@/lib/types";
+import { BLOOD_TYPES, GOVERNORATES } from "@/lib/types";
 import { formatArabicDateTime } from "@/lib/utils";
 
 export default function DemandPage() {
@@ -24,32 +24,43 @@ export default function DemandPage() {
       </PageHeader>
 
       <div className="container-page py-8">
+        <div className="mb-6">
+          <EmergencyNotice />
+        </div>
+
         <div className="max-w-xs">
           <label className="label" htmlFor="gov">اختر المحافظة</label>
           <select id="gov" className="input" value={gov} onChange={(e) => setGov(e.target.value)}>
-            {demandByGovernorate.map((d) => (
-              <option key={d.governorate} value={d.governorate}>{d.governorate}</option>
+            {GOVERNORATES.map((g) => (
+              <option key={g} value={g}>{g}</option>
             ))}
           </select>
         </div>
 
-        {record && (
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {BLOOD_TYPES.map((bt) => (
-              <div key={bt} className="card flex flex-col items-center gap-2 text-center">
-                <span className="text-3xl font-extrabold text-blood-600">{bt}</span>
-                <DemandBadge status={record.statuses[bt]} />
-              </div>
-            ))}
+        {record ? (
+          <>
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {BLOOD_TYPES.map((bt) => (
+                <div key={bt} className="card flex flex-col items-center gap-2 text-center">
+                  <span className="text-3xl font-extrabold text-blood-600">{bt}</span>
+                  <DemandBadge status={record.statuses[bt]} />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+              <span>آخر تحديث (تجريبي): {formatArabicDateTime(demandLastUpdated)}</span>
+              <DemoBadge />
+            </div>
+          </>
+        ) : (
+          <div className="mt-6">
+            <EmptyState
+              title="لا توجد بيانات تجريبية لهذه المحافظة"
+              message="لم تُضف مؤشرات طلب تجريبية لهذه المحافظة بعد. جرّب اختيار محافظة أخرى."
+            />
           </div>
         )}
-
-        <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-          <span>
-            آخر تحديث (تجريبي): {formatArabicDateTime(demandLastUpdated)}
-          </span>
-          <DemoBadge />
-        </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <Legend status="متوفر" desc="لا يوجد احتياج ملحّ حاليًا." color="bg-emerald-500" />

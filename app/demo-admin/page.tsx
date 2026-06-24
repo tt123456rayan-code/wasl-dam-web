@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DemandBadge } from "@/components/ui";
+import { CampaignStatusBadge } from "@/components/CampaignStatusBadge";
 import { campaigns as seedCampaigns } from "@/data/campaigns";
 import { centers as seedCenters } from "@/data/centers";
 import { demandByGovernorate as seedDemand } from "@/data/demand";
@@ -173,23 +174,12 @@ export default function DemoAdminPage() {
                 }}
               />
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="text-sm">
-                  <span className="label">الحالة</span>
-                  <select
-                    className="input"
-                    value={c.status}
-                    onChange={(e) =>
-                      persistCampaigns(
-                        campaigns.map((x, i) =>
-                          i === ci ? { ...x, status: e.target.value as Campaign["status"] } : x
-                        )
-                      )
-                    }
-                  >
-                    <option value="active">نشطة الآن</option>
-                    <option value="upcoming">قادمة</option>
-                  </select>
-                </label>
+                <div className="text-sm">
+                  <span className="label">الحالة (محسوبة تلقائيًا من التاريخ)</span>
+                  <div className="pt-1">
+                    <CampaignStatusBadge campaign={c} />
+                  </div>
+                </div>
                 <label className="text-sm">
                   <span className="label">مستوى الطلب</span>
                   <select

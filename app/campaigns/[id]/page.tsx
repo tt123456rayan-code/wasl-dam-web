@@ -1,12 +1,35 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CampaignInterest } from "@/components/CampaignInterest";
-import { DemandBadge, DemoBadge, EligibilityNotice } from "@/components/ui";
+import { CampaignStatusBadge } from "@/components/CampaignStatusBadge";
+import { ReportButton } from "@/components/ReportButton";
+import {
+  DemandBadge,
+  DemoBadge,
+  EligibilityNotice,
+  EmergencyNotice,
+  SourceLine,
+} from "@/components/ui";
 import { campaigns } from "@/data/campaigns";
-import { formatArabicDate, mapsSearchUrl } from "@/lib/utils";
+import { formatArabicDate, formatTimeRange, mapsSearchUrl } from "@/lib/utils";
 
 export function generateStaticParams() {
   return campaigns.map((c) => ({ id: c.id }));
+}
+
+export function generateMetadata({
+  params,
+}: {
+  params: { id: string };
+}): Metadata {
+  const campaign = campaigns.find((c) => c.id === params.id);
+  return {
+    title: campaign ? campaign.title : "تفاصيل الحملة",
+    description: campaign
+      ? `${campaign.title} — ${campaign.governorate}. بيانات تجريبية لأغراض العرض فقط.`
+      : undefined,
+  };
 }
 
 export default function CampaignDetailPage({
@@ -26,9 +49,7 @@ export default function CampaignDetailPage({
       <div className="mt-4 grid gap-8 lg:grid-cols-3">
         <article className="lg:col-span-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              {campaign.status === "active" ? "نشطة الآن" : "قادمة"}
-            </span>
+            <CampaignStatusBadge campaign={campaign} />
             <DemandBadge status={campaign.demand} />
             <DemoBadge />
           </div>
@@ -39,8 +60,8 @@ export default function CampaignDetailPage({
           </p>
 
           <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-            <Detail label="التاريخ" value={formatArabicDate(campaign.date)} />
-            <Detail label="الوقت" value={campaign.time} />
+            <Detail label="التاريخ" value={formatArabicDate(campaign.startDateTime)} />
+            <Detail label="الوقت" value={formatTimeRange(campaign.startDateTime, campaign.endDateTime)} />
             <Detail label="المحافظة" value={campaign.governorate} />
             <Detail label="الموقع" value={campaign.location} />
             <Detail label="الجهة المنظّمة" value={campaign.organizer} />
@@ -57,6 +78,9 @@ export default function CampaignDetailPage({
               الاتجاهات عبر خرائط Google
             </a>
           </div>
+
+          <SourceLine source={campaign.source} lastUpdated={campaign.lastUpdated} />
+          <ReportButton targetType="campaign" targetId={campaign.id} targetName={campaign.title} />
         </article>
 
         <aside className="space-y-4">
@@ -70,6 +94,7 @@ export default function CampaignDetailPage({
             </div>
           </div>
           <EligibilityNotice />
+          <EmergencyNotice />
         </aside>
       </div>
     </div>

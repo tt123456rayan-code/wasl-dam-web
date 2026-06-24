@@ -19,6 +19,7 @@ export const DEMAND_LABELS: Record<DemandStatus, string> = {
   urgent: "احتياج عاجل",
 };
 
+// كل محافظات الأردن الـ 12 — مصدر موحّد لكل الفلاتر والنماذج
 export const GOVERNORATES: string[] = [
   "عمّان",
   "إربد",
@@ -34,27 +35,48 @@ export const GOVERNORATES: string[] = [
   "الطفيلة",
 ];
 
+// حالة الحملة تُحسب تلقائيًا من تاريخ البداية والنهاية
+export type CampaignStatus = "upcoming" | "active" | "ended";
+
+export const CAMPAIGN_STATUS_LABELS: Record<CampaignStatus, string> = {
+  upcoming: "قادمة",
+  active: "نشطة الآن",
+  ended: "منتهية",
+};
+
 export interface Center {
   id: string;
   name: string;
   governorate: string;
   address: string;
+  /** نص ساعات العمل للعرض */
   hours: string;
+  /** أيام العمل: 0 الأحد ... 6 السبت (متوافق مع Date.getDay) */
+  openDays: number[];
+  /** ساعة الفتح (0-23) */
+  openFrom: number;
+  /** ساعة الإغلاق (0-23) */
+  openTo: number;
   services: string[];
+  source: string;
+  lastUpdated: string;
 }
 
 export interface Campaign {
   id: string;
   title: string;
-  date: string;
-  time: string;
+  /** وقت البداية بصيغة ISO */
+  startDateTime: string;
+  /** وقت النهاية بصيغة ISO */
+  endDateTime: string;
   governorate: string;
   location: string;
   organizer: string;
   demand: DemandStatus;
   neededTypes: BloodType[];
-  status: "active" | "upcoming";
   description: string;
+  source: string;
+  lastUpdated: string;
 }
 
 export interface DemandRecord {
