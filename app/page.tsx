@@ -1,25 +1,16 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
-import { CampaignStatusBadge } from "@/components/CampaignStatusBadge";
 import {
   DemandBadge,
   DemoBadge,
   EmergencyNotice,
   SafetyNotice,
 } from "@/components/ui";
-import { campaigns } from "@/data/campaigns";
 import { demandByGovernorate } from "@/data/demand";
 import { BLOOD_TYPES } from "@/lib/types";
-import { formatArabicDate, formatTimeRange } from "@/lib/utils";
 
 export default function HomePage() {
   const overview = demandByGovernorate[0]; // عمّان كنظرة عامة تجريبية
-  const featured = [...campaigns]
-    .sort(
-      (a, b) =>
-        new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
-    )
-    .slice(0, 3);
 
   return (
     <div>
@@ -81,33 +72,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured campaigns */}
+      {/* Campaigns */}
       <section className="border-y border-slate-200 bg-slate-50 py-14 dark:border-slate-800 dark:bg-slate-900/40">
         <div className="container-page">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="section-title">حملات تبرع تجريبية</h2>
-            <DemoBadge />
-          </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {featured.map((c) => (
-              <Link key={c.id} href={`/campaigns/${c.id}`} className="card hover:border-blood-300 hover:shadow-md">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    {c.governorate}
-                  </span>
-                  <CampaignStatusBadge campaign={c} />
-                </div>
-                <h3 className="mt-2 text-base font-bold">{c.title}</h3>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  {formatArabicDate(c.startDateTime)} —{" "}
-                  {formatTimeRange(c.startDateTime, c.endDateTime)}
-                </p>
-                <p className="mt-3 text-sm font-semibold text-blood-600">التفاصيل ←</p>
-              </Link>
-            ))}
-          </div>
+          <h2 className="section-title">حملات التبرع</h2>
+          <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
+            حملات التبرع أحداث مؤقتة تُعلَن عبر القنوات الرسمية والإخبارية. اعثر على
+            الحملات الحقيقية الحالية عبر مصادر حيّة، وتأكّد من تفاصيلها قبل التوجّه.
+          </p>
           <div className="mt-6">
-            <Link href="/campaigns" className="btn-secondary">عرض كل الحملات</Link>
+            <Link href="/campaigns" className="btn-primary">
+              ابحث عن حملات التبرع الحقيقية
+            </Link>
           </div>
         </div>
       </section>
@@ -117,7 +93,7 @@ export default function HomePage() {
         <h2 className="section-title text-center">كيف تعمل المنصة؟</h2>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
-            { n: "١", t: "ابحث", d: "ابحث عن مركز تبرع أو حملة قريبة منك ضمن البيانات التجريبية." },
+            { n: "١", t: "ابحث", d: "اعثر على مركز تبرع حقيقي قريب أو حملة حالية عبر المصادر الرسمية والخريطة." },
             { n: "٢", t: "سجّل نيتك", d: "سجّل رغبتك بالتبرع لتذكير نفسك — التسجيل ليس موعدًا ولا موافقة طبية." },
             { n: "٣", t: "توجّه لمركز التبرع", d: "اذهب إلى مركز التبرع حيث يقرر كادر بنك الدم الرسمي أهليتك." },
           ].map((s) => (
