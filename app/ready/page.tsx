@@ -22,7 +22,7 @@ const initial: FormState = {
   governorate: "",
   bloodType: "",
   lastDonation: "",
-  notify: "sms",
+  notify: "none",
   consent: false,
 };
 
@@ -142,17 +142,20 @@ export default function ReadyPage() {
               />
             </Field>
 
-            <Field label="طريقة التذكير المفضّلة" htmlFor="notify">
+            <Field label="تفضيل التذكير المستقبلي (اختياري)" htmlFor="notify">
               <select
                 id="notify"
                 className="input"
                 value={form.notify}
                 onChange={(e) => setForm({ ...form, notify: e.target.value })}
               >
-                <option value="sms">رسالة نصية (تجريبي)</option>
-                <option value="email">بريد إلكتروني (تجريبي)</option>
-                <option value="none">بدون تذكير</option>
+                <option value="none">لا أرغب بالتذكير</option>
+                <option value="future">أرغب بتلقّي تذكير مستقبلًا (ميزة غير مفعّلة بعد)</option>
               </select>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                ملاحظة: النموذج التجريبي لا يرسل أي رسائل نصية أو بريد إلكتروني. هذا
+                التفضيل يُحفظ محليًا فقط لقياس الاهتمام بميزة مستقبلية.
+              </p>
             </Field>
 
             <div>

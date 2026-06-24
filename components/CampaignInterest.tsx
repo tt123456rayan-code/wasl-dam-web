@@ -11,36 +11,50 @@ export function CampaignInterest({
   campaignTitle: string;
 }) {
   const [registered, setRegistered] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [error, setError] = useState(false);
 
+  // المزامنة مع التخزين المحلي بعد التركيب — الزر يعمل فورًا دون شاشة "تحميل"
   useEffect(() => {
-    const list = readJSON<string[]>(STORAGE_KEYS.campaignInterests, []);
-    setRegistered(list.includes(campaignId));
-    setReady(true);
+    try {
+      const list = readJSON<string[]>(STORAGE_KEYS.campaignInterests, []);
+      setRegistered(list.includes(campaignId));
+    } catch {
+      setError(true);
+    }
   }, [campaignId]);
 
   function register() {
-    const list = readJSON<string[]>(STORAGE_KEYS.campaignInterests, []);
-    if (!list.includes(campaignId)) {
-      writeJSON(STORAGE_KEYS.campaignInterests, [...list, campaignId]);
+    try {
+      const list = readJSON<string[]>(STORAGE_KEYS.campaignInterests, []);
+      if (!list.includes(campaignId)) {
+        writeJSON(STORAGE_KEYS.campaignInterests, [...list, campaignId]);
+      }
+      setRegistered(true);
+      setError(false);
+    } catch {
+      setError(true);
     }
-    setRegistered(true);
   }
 
   function cancel() {
-    const list = readJSON<string[]>(STORAGE_KEYS.campaignInterests, []);
-    writeJSON(
-      STORAGE_KEYS.campaignInterests,
-      list.filter((id) => id !== campaignId)
-    );
-    setRegistered(false);
+    try {
+      const list = readJSON<string[]>(STORAGE_KEYS.campaignInterests, []);
+      writeJSON(
+        STORAGE_KEYS.campaignInterests,
+        list.filter((id) => id !== campaignId)
+      );
+      setRegistered(false);
+    } catch {
+      setError(true);
+    }
   }
 
-  if (!ready) {
+  if (error) {
     return (
-      <button className="btn-primary w-full" disabled>
-        جارٍ التحميل…
-      </button>
+      <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        تعذّر الوصول إلى التخزين المحلي في متصفحك (قد يكون التصفح الخاص مفعّلًا). يمكنك
+        مع ذلك التوجه إلى مركز التبرع مباشرة دون تسجيل نية.
+      </div>
     );
   }
 

@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PageHeader, DemoBadge, EmptyState } from "@/components/ui";
+import { PageHeader, EmptyState } from "@/components/ui";
+import { OfficialCentersFinder } from "@/components/OfficialCentersFinder";
+import { ReportButton } from "@/components/ReportButton";
 import { centers } from "@/data/centers";
 import { GOVERNORATES } from "@/lib/types";
 import { mapsSearchUrl } from "@/lib/utils";
@@ -13,7 +15,8 @@ export default function CentersPage() {
   const results = useMemo(() => {
     const q = query.trim();
     return centers.filter((c) => {
-      const matchQ = q === "" || c.name.includes(q) || c.address.includes(q);
+      const matchQ =
+        q === "" || c.name.includes(q) || c.kind.includes(q) || c.note.includes(q);
       const matchG = gov === "" || c.governorate === gov;
       return matchQ && matchG;
     });
@@ -27,19 +30,26 @@ export default function CentersPage() {
     <div>
       <PageHeader
         title="مراكز التبرع"
-        subtitle="ابحث عن مراكز التبرع الرسمية حسب الاسم أو المحافظة. جميع المراكز المعروضة بيانات تجريبية لأغراض العرض."
-      >
-        <DemoBadge />
-      </PageHeader>
+        subtitle="مرافق صحية حكومية معروفة في الأردن قد تتوفر فيها خدمة التبرع بالدم، مع بحث مباشر على الخريطة للوصول الدقيق."
+      />
 
       <div className="container-page py-8">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <OfficialCentersFinder />
+
+        <div className="mt-8 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          القائمة أدناه لمرافق صحية حكومية معروفة وليست قائمة رسمية صادرة عن وزارة
+          الصحة. هذا النموذج غير رسمي وغير تابع لها. يرجى التأكد من توفّر خدمة التبرع
+          والعنوان وساعات العمل من المرفق مباشرةً قبل التوجّه. في الطوارئ اتصل
+          بالمستشفى أو بنك الدم مباشرةً.
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <div className="sm:col-span-2">
-            <label className="label" htmlFor="search">ابحث باسم المركز أو العنوان</label>
+            <label className="label" htmlFor="search">ابحث باسم المرفق أو نوعه</label>
             <input
               id="search"
               className="input"
-              placeholder="مثال: عمّان، مركز تبرع…"
+              placeholder="مثال: بنك الدم، مستشفى…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -56,18 +66,14 @@ export default function CentersPage() {
         </div>
 
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          النتائج: {results.length} مركز
+          النتائج: {results.length} مرفق
         </p>
 
-        {centers.length === 0 ? (
-          <div className="mt-6">
-            <EmptyState title="لا توجد مراكز" message="لم تتم إضافة أي مراكز بعد." />
-          </div>
-        ) : results.length === 0 ? (
+        {results.length === 0 ? (
           <div className="mt-6">
             <EmptyState
               title="لا توجد نتائج مطابقة"
-              message="جرّب تعديل كلمة البحث أو اختيار محافظة مختلفة."
+              message="جرّب تعديل كلمة البحث أو اختيار محافظة مختلفة، أو استخدم البحث المباشر على الخريطة في الأعلى."
             />
           </div>
         ) : (
@@ -76,31 +82,27 @@ export default function CentersPage() {
               <article key={c.id} className="card">
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="text-lg font-bold">{c.name}</h2>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                     {c.governorate}
                   </span>
                 </div>
-                <dl className="mt-3 space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
-                  <div className="flex gap-2"><dt className="font-medium text-slate-700 dark:text-slate-300">العنوان:</dt><dd>{c.address}</dd></div>
-                  <div className="flex gap-2"><dt className="font-medium text-slate-700 dark:text-slate-300">الدوام:</dt><dd>{c.hours}</dd></div>
-                </dl>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {c.services.map((s) => (
-                    <span key={s} className="rounded-full bg-blood-50 px-2.5 py-1 text-xs font-medium text-blood-700 dark:bg-blood-500/10 dark:text-blood-300">
-                      {s}
-                    </span>
-                  ))}
-                </div>
+                <p className="mt-2 text-sm font-medium text-blood-700 dark:text-blood-300">{c.kind}</p>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{c.note}</p>
+                <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                  تأكّد من توفّر خدمة التبرع والعنوان وساعات العمل عبر الخريطة أو
+                  بالاتصال بالمرفق.
+                </p>
                 <div className="mt-4">
                   <a
-                    href={mapsSearchUrl(`${c.name} ${c.governorate} ${c.address}`)}
+                    href={mapsSearchUrl(c.mapsQuery)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-secondary w-full"
                   >
-                    الاتجاهات عبر خرائط Google
+                    الموقع والاتجاهات عبر خرائط Google
                   </a>
                 </div>
+                <ReportButton targetType="center" targetId={c.id} targetName={c.name} />
               </article>
             ))}
           </div>

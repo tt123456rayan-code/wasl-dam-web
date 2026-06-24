@@ -1,5 +1,5 @@
 import { DEMAND_LABELS, type DemandStatus } from "@/lib/types";
-import { cn, demandStyles } from "@/lib/utils";
+import { cn, demandStyles, formatArabicDate } from "@/lib/utils";
 
 export function DemoBadge({ className }: { className?: string }) {
   return (
@@ -51,6 +51,34 @@ export function EligibilityNotice() {
     <div className="rounded-2xl border border-blood-200 bg-blood-50 p-4 text-sm leading-relaxed text-blood-800 dark:border-blood-500/30 dark:bg-blood-500/10 dark:text-blood-200">
       هذا فحص توعوي مبدئي فقط، والقرار النهائي للتبرع يعود لكادر بنك الدم الرسمي.
     </div>
+  );
+}
+
+export function EmergencyNotice() {
+  return (
+    <div className="rounded-2xl border border-blood-300 bg-blood-50 p-4 dark:border-blood-500/40 dark:bg-blood-500/10">
+      <p className="flex items-start gap-2 text-sm font-semibold leading-relaxed text-blood-800 dark:text-blood-200">
+        <span aria-hidden className="mt-0.5">⚠</span>
+        <span>
+          هذه المنصة ليست لطلب الدم في الحالات الطارئة. في الطوارئ يرجى التواصل
+          مباشرةً مع المستشفى أو قنوات بنك الدم الرسمية.
+        </span>
+      </p>
+    </div>
+  );
+}
+
+export function SourceLine({
+  source,
+  lastUpdated,
+}: {
+  source: string;
+  lastUpdated: string;
+}) {
+  return (
+    <p className="mt-3 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
+      المصدر: {source} — آخر تحديث: {formatArabicDate(lastUpdated)}
+    </p>
   );
 }
 

@@ -2,34 +2,42 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { PageHeader, DemoBadge, DemandBadge, EmptyState } from "@/components/ui";
+import { PageHeader, DemoBadge, EmptyState, SourceLine } from "@/components/ui";
+import { CampaignStatusBadge } from "@/components/CampaignStatusBadge";
+import { ReportButton } from "@/components/ReportButton";
 import { campaigns } from "@/data/campaigns";
-import { BLOOD_TYPES, GOVERNORATES, type BloodType } from "@/lib/types";
-import { formatArabicDate } from "@/lib/utils";
+import {
+  BLOOD_TYPES,
+  CAMPAIGN_STATUS_LABELS,
+  GOVERNORATES,
+  type BloodType,
+  type CampaignStatus,
+} from "@/lib/types";
+import { formatArabicDate, formatTimeRange, getCampaignStatus } from "@/lib/utils";
+import { useNow } from "@/lib/useNow";
 
 export default function CampaignsPage() {
   const [gov, setGov] = useState("");
-  const [status, setStatus] = useState<"" | "active" | "upcoming">("");
+  const [status, setStatus] = useState<"" | CampaignStatus>("");
   const [type, setType] = useState<"" | BloodType>("");
+  const now = useNow();
 
   const results = useMemo(() => {
     return campaigns.filter((c) => {
       const mg = gov === "" || c.governorate === gov;
-      const ms = status === "" || c.status === status;
+      const ms =
+        status === "" ||
+        (now !== null && getCampaignStatus(c, now) === status);
       const mt = type === "" || c.neededTypes.includes(type);
       return mg && ms && mt;
     });
-  }, [gov, status, type]);
-
-  const govs = GOVERNORATES.filter((g) =>
-    campaigns.some((c) => c.governorate === g)
-  );
+  }, [gov, status, type, now]);
 
   return (
     <div>
       <PageHeader
         title="الحملات"
-        subtitle="حملات تبرع تجريبية معتمدة من جهات منظمة. اختر حملة لعرض التفاصيل وتسجيل نيتك للتبرع."
+        subtitle="حملات تبرع تجريبية من جهات منظّمة (بيانات تجريبية). تُحسب حالة كل حملة تلقائيًا من تاريخها. اختر حملة لعرض التفاصيل وتسجيل نيتك للتبرع."
       >
         <DemoBadge />
       </PageHeader>
@@ -40,7 +48,7 @@ export default function CampaignsPage() {
             <label className="label" htmlFor="gov">المحافظة</label>
             <select id="gov" className="input" value={gov} onChange={(e) => setGov(e.target.value)}>
               <option value="">كل المحافظات</option>
-              {govs.map((g) => <option key={g} value={g}>{g}</option>)}
+              {GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
           <div>
@@ -49,11 +57,12 @@ export default function CampaignsPage() {
               id="status"
               className="input"
               value={status}
-              onChange={(e) => setStatus(e.target.value as "" | "active" | "upcoming")}
+              onChange={(e) => setStatus(e.target.value as "" | CampaignStatus)}
             >
               <option value="">الكل</option>
-              <option value="active">نشطة الآن</option>
-              <option value="upcoming">قادمة</option>
+              <option value="upcoming">{CAMPAIGN_STATUS_LABELS.upcoming}</option>
+              <option value="active">{CAMPAIGN_STATUS_LABELS.active}</option>
+              <option value="ended">{CAMPAIGN_STATUS_LABELS.ended}</option>
             </select>
           </div>
           <div>
@@ -86,20 +95,20 @@ export default function CampaignsPage() {
             {results.map((c) => (
               <article key={c.id} className="card flex flex-col">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                    {c.status === "active" ? "نشطة الآن" : "قادمة"}
+                  <CampaignStatusBadge campaign={c} />
+                  <span className="rounded-full bg-blood-50 px-2.5 py-1 text-xs font-medium text-blood-700 dark:bg-blood-500/10 dark:text-blood-300">
+                    {c.governorate}
                   </span>
-                  <DemandBadge status={c.demand} />
                 </div>
                 <h2 className="mt-2 text-lg font-bold">{c.title}</h2>
                 <dl className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-400">
-                  <div>{formatArabicDate(c.date)} — {c.time}</div>
+                  <div>{formatArabicDate(c.startDateTime)} — {formatTimeRange(c.startDateTime, c.endDateTime)}</div>
                   <div>{c.location} ({c.governorate})</div>
                   <div>المنظّم: {c.organizer}</div>
                 </dl>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {c.neededTypes.map((t) => (
-                    <span key={t} className="rounded-full bg-blood-50 px-2 py-0.5 text-xs font-bold text-blood-700 dark:bg-blood-500/10 dark:text-blood-300">
+                    <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                       {t}
                     </span>
                   ))}
@@ -109,6 +118,8 @@ export default function CampaignsPage() {
                     عرض التفاصيل
                   </Link>
                 </div>
+                <SourceLine source={c.source} lastUpdated={c.lastUpdated} />
+                <ReportButton targetType="campaign" targetId={c.id} targetName={c.title} />
               </article>
             ))}
           </div>

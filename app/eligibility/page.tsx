@@ -34,11 +34,11 @@ export default function EligibilityPage() {
     const basicsOk = answers["age"] === "yes" && answers["wellToday"] === "yes";
 
     if (hasCaution) {
-      setResult("قد تحتاج إلى تأجيل التبرع أو سؤال كادر بنك الدم");
+      setResult("قد تحتاج إلى تأجيل التبرع — يرجى سؤال كادر بنك الدم الرسمي قبل التبرع");
     } else if (basicsOk) {
-      setResult("قد تكون قادرًا على مراجعة مركز التبرع");
+      setResult("يمكنك زيارة مركز التبرع والاستفسار من كادر بنك الدم الرسمي");
     } else {
-      setResult("يرجى التواصل مع مركز التبرع للتأكد");
+      setResult("يرجى التواصل مع مركز التبرع وسؤال كادر بنك الدم الرسمي للتأكد");
     }
   }
 
@@ -104,7 +104,7 @@ export default function EligibilityPage() {
         ) : (
           <div className="space-y-5">
             <div className="rounded-2xl border border-blood-200 bg-blood-50 p-6 dark:border-blood-500/30 dark:bg-blood-500/10">
-              <p className="text-sm text-slate-600 dark:text-slate-300">النتيجة التوعوية:</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">نتيجة توعوية (ليست قرارًا أو موافقة طبية):</p>
               <p className="mt-1 text-xl font-bold text-blood-700 dark:text-blood-200">
                 {result}
               </p>

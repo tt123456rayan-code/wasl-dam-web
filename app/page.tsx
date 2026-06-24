@@ -1,14 +1,25 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
-import { DemandBadge, DemoBadge, SafetyNotice } from "@/components/ui";
+import { CampaignStatusBadge } from "@/components/CampaignStatusBadge";
+import {
+  DemandBadge,
+  DemoBadge,
+  EmergencyNotice,
+  SafetyNotice,
+} from "@/components/ui";
 import { campaigns } from "@/data/campaigns";
 import { demandByGovernorate } from "@/data/demand";
 import { BLOOD_TYPES } from "@/lib/types";
-import { formatArabicDate } from "@/lib/utils";
+import { formatArabicDate, formatTimeRange } from "@/lib/utils";
 
 export default function HomePage() {
   const overview = demandByGovernorate[0]; // عمّان كنظرة عامة تجريبية
-  const upcoming = campaigns.slice(0, 3);
+  const featured = [...campaigns]
+    .sort(
+      (a, b) =>
+        new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+    )
+    .slice(0, 3);
 
   return (
     <div>
@@ -20,8 +31,8 @@ export default function HomePage() {
             تبرعك أقرب… وحياتهم تستمر
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-slate-600 dark:text-slate-300">
-            ابحث عن أقرب مركز تبرع رسمي، تابع الحملات المعتمدة، وسجّل نيتك للتبرع.
-            منصة دعم رقمية فقط — القرار النهائي للتبرع يعود لكادر بنك الدم الرسمي.
+            ابحث عن مركز تبرع قريب، تابع حملات التبرع، وسجّل نيتك للتبرع. منصة دعم
+            رقمية فقط — القرار النهائي للتبرع يعود لكادر بنك الدم الرسمي.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/centers" className="btn-primary">
@@ -36,6 +47,11 @@ export default function HomePage() {
             بدعم وإلهام من مبادرة همّة الشبابية (NYIJO)
           </p>
         </div>
+      </section>
+
+      {/* Emergency notice */}
+      <section className="container-page pt-8">
+        <EmergencyNotice />
       </section>
 
       {/* Blood demand overview */}
@@ -65,25 +81,26 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Upcoming campaigns */}
+      {/* Featured campaigns */}
       <section className="border-y border-slate-200 bg-slate-50 py-14 dark:border-slate-800 dark:bg-slate-900/40">
         <div className="container-page">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="section-title">حملات تجريبية قادمة</h2>
+            <h2 className="section-title">حملات تبرع تجريبية</h2>
             <DemoBadge />
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {upcoming.map((c) => (
+            {featured.map((c) => (
               <Link key={c.id} href={`/campaigns/${c.id}`} className="card hover:border-blood-300 hover:shadow-md">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                     {c.governorate}
                   </span>
-                  <DemandBadge status={c.demand} />
+                  <CampaignStatusBadge campaign={c} />
                 </div>
                 <h3 className="mt-2 text-base font-bold">{c.title}</h3>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  {formatArabicDate(c.date)} — {c.time}
+                  {formatArabicDate(c.startDateTime)} —{" "}
+                  {formatTimeRange(c.startDateTime, c.endDateTime)}
                 </p>
                 <p className="mt-3 text-sm font-semibold text-blood-600">التفاصيل ←</p>
               </Link>
@@ -100,9 +117,9 @@ export default function HomePage() {
         <h2 className="section-title text-center">كيف تعمل المنصة؟</h2>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
-            { n: "١", t: "ابحث", d: "ابحث عن أقرب مركز تبرع رسمي أو حملة معتمدة قريبة منك." },
+            { n: "١", t: "ابحث", d: "ابحث عن مركز تبرع أو حملة قريبة منك ضمن البيانات التجريبية." },
             { n: "٢", t: "سجّل نيتك", d: "سجّل رغبتك بالتبرع لتذكير نفسك — التسجيل ليس موعدًا ولا موافقة طبية." },
-            { n: "٣", t: "توجه للمركز الرسمي", d: "اذهب إلى المركز الرسمي حيث يقرر كادر بنك الدم أهليتك." },
+            { n: "٣", t: "توجّه لمركز التبرع", d: "اذهب إلى مركز التبرع حيث يقرر كادر بنك الدم الرسمي أهليتك." },
           ].map((s) => (
             <div key={s.n} className="card text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blood-600 text-xl font-bold text-white">
