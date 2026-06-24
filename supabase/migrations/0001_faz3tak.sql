@@ -110,7 +110,7 @@ create or replace function faz3_create_request(
   p_hospital text, p_governorate text, p_blood_type text,
   p_units int, p_urgency faz3_urgency, p_expiry timestamptz, p_message text
 ) returns table(id text, token text)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, extensions as $$
 declare v_id text; v_token text;
 begin
   if p_units < 1 or p_units > 50 then raise exception 'invalid units'; end if;
@@ -131,7 +131,7 @@ end; $$;
 
 -- التحقق من الرمز (مساعد داخلي)
 create or replace function faz3_check(p_ref text, p_token text)
-returns faz3_requests language plpgsql security definer set search_path = public as $$
+returns faz3_requests language plpgsql security definer set search_path = public, extensions as $
 declare r faz3_requests;
 begin
   select * into r from faz3_requests where id = p_ref;
@@ -143,7 +143,7 @@ end; $$;
 
 -- RPC: تحديث العدد المكتمل (محصور بالحد، إغلاق تلقائي عند الاكتمال)
 create or replace function faz3_update_count(p_ref text, p_token text, p_completed int)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $
 declare r faz3_requests; v int;
 begin
   r := faz3_check(p_ref, p_token);
@@ -159,7 +159,7 @@ end; $$;
 
 -- RPC: ملاحظة عامة / إلحاح / تمديد / حالة نهائية
 create or replace function faz3_add_note(p_ref text, p_token text, p_note text)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $
 declare r faz3_requests;
 begin
   r := faz3_check(p_ref, p_token);
@@ -168,7 +168,7 @@ begin
 end; $$;
 
 create or replace function faz3_set_urgency(p_ref text, p_token text, p_urgency faz3_urgency)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $
 declare r faz3_requests;
 begin
   r := faz3_check(p_ref, p_token);
@@ -178,7 +178,7 @@ begin
 end; $$;
 
 create or replace function faz3_extend_expiry(p_ref text, p_token text, p_expiry timestamptz)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $
 declare r faz3_requests;
 begin
   r := faz3_check(p_ref, p_token);
@@ -189,7 +189,7 @@ begin
 end; $$;
 
 create or replace function faz3_set_status(p_ref text, p_token text, p_status faz3_manual_status)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $
 declare r faz3_requests;
 begin
   r := faz3_check(p_ref, p_token);
@@ -200,7 +200,7 @@ end; $$;
 
 -- RPC: بلاغ عن معلومة غير صحيحة
 create or replace function faz3_add_report(p_ref text, p_reason text)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = public, extensions as $
 begin
   if not exists (select 1 from faz3_requests where id = p_ref) then raise exception 'not found'; end if;
   insert into faz3_reports(request_id, reason) values (p_ref, p_reason);
