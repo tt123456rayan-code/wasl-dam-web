@@ -11,14 +11,15 @@ import {
 import {
   PRIVACY_LABELS,
   URGENCY_LABELS,
-  generateReference,
-  generateToken,
-  type BloodRequest,
   type RequestBloodType,
   type RequesterPrivacyMode,
   type UrgencyLevel,
 } from "@/lib/faz3tak";
-import { loadRequests, upsertRequest } from "@/lib/faz3tak-storage";
+import {
+  createRequest,
+  DbNotConfiguredError,
+  isSupabaseEnabled,
+} from "@/lib/faz3tak-data";
 import { centers } from "@/data/centers";
 import { BLOOD_TYPES, GOVERNORATES } from "@/lib/types";
 
@@ -53,7 +54,9 @@ const initial: FormState = {
 export default function CreateRequestPage() {
   const [form, setForm] = useState<FormState>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [created, setCreated] = useState<BloodRequest | null>(null);
+  const [created, setCreated] = useState<{ id: string; token: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const hospitalNames = Array.from(new Set(centers.map((c) => c.name)));
 
@@ -66,45 +69,44 @@ export default function CreateRequestPage() {
     if (!form.governorate) e.governorate = "يرجى اختيار المحافظة.";
     if (!form.bloodType) e.bloodType = "يرجى اختيار الفصيلة أو «حسب توجيه بنك الدم».";
     const units = Number(form.unitsRequired);
-    if (!Number.isInteger(units) || units < 1 || units > 50)
-      e.unitsRequired = "أدخل عدد وحدات صحيح (1 إلى 50).";
+    if (!Number.isInteger(units) || units < 1 || units > 50) e.unitsRequired = "أدخل عدد وحدات صحيح (1 إلى 50).";
     if (!form.expiry) e.expiry = "يرجى تحديد تاريخ ووقت الانتهاء.";
-    else if (new Date(form.expiry).getTime() <= Date.now())
-      e.expiry = "يجب أن يكون تاريخ الانتهاء في المستقبل.";
+    else if (new Date(form.expiry).getTime() <= Date.now()) e.expiry = "يجب أن يكون تاريخ الانتهاء في المستقبل.";
     if (form.publicMessage.trim().length < 5) e.publicMessage = "اكتب رسالة عامة قصيرة.";
     if (!form.consent) e.consent = "يلزم الموافقة للمتابعة.";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  function submit(ev: React.FormEvent) {
+  async function submit(ev: React.FormEvent) {
     ev.preventDefault();
+    setSubmitError("");
     if (!validate()) return;
-    const existingIds = loadRequests().map((r) => r.id);
-    const id = generateReference(existingIds);
-    const token = generateToken();
-    const nowIso = new Date().toISOString();
-    const req: BloodRequest = {
-      id,
-      createdAt: nowIso,
-      requesterFullName: form.requesterFullName.trim(),
-      privacyMode: form.privacyMode,
-      requesterMobile: form.requesterMobile.trim() || undefined,
-      hospital: form.hospital.trim(),
-      governorate: form.governorate,
-      bloodType: form.bloodType as RequestBloodType,
-      unitsRequired: Number(form.unitsRequired),
-      unitsCompleted: 0,
-      urgency: form.urgency,
-      expiry: new Date(form.expiry).toISOString(),
-      publicMessage: form.publicMessage.trim(),
-      updates: [{ id: `u-${Date.now()}`, at: nowIso, type: "created", message: "تم إنشاء الطلب" }],
-      token,
-      isDemo: false,
-    };
-    upsertRequest(req);
-    setCreated(req);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setBusy(true);
+    try {
+      const res = await createRequest({
+        fullName: form.requesterFullName.trim(),
+        privacy: form.privacyMode,
+        mobile: form.requesterMobile.trim(),
+        hospital: form.hospital.trim(),
+        governorate: form.governorate,
+        bloodType: form.bloodType as RequestBloodType,
+        units: Number(form.unitsRequired),
+        urgency: form.urgency,
+        expiry: new Date(form.expiry).toISOString(),
+        message: form.publicMessage.trim(),
+      });
+      setCreated(res);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      setSubmitError(
+        err instanceof DbNotConfiguredError
+          ? "قاعدة البيانات غير مُعدّة في هذه النسخة، فلا يمكن إنشاء طلب حقيقي حاليًا."
+          : "تعذّر إنشاء الطلب. تأكد من البيانات وحاول لاحقًا."
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (created) {
@@ -118,7 +120,6 @@ export default function CreateRequestPage() {
               احفظ رقم الطلب ورمز الإدارة الخاص — ستحتاجهما لتحديث حالة الطلب لاحقًا.
             </p>
           </div>
-
           <div className="card mt-5 space-y-3">
             <Row label="رقم الطلب (مرجع عام)" value={created.id} />
             <Row label="رمز الإدارة الخاص (لا تشاركه)" value={created.token} />
@@ -128,12 +129,9 @@ export default function CreateRequestPage() {
             </p>
             <div className="flex flex-wrap gap-2">
               <Link href="/faz3tak/manage" className="btn-primary">إدارة الطلب</Link>
+              <Link href={`/faz3tak/view?ref=${encodeURIComponent(created.id)}`} className="btn-secondary">عرض الطلب العام</Link>
               <Link href="/faz3tak" className="btn-secondary">لوحة فزعتك</Link>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              ملاحظة: في هذا النموذج التجريبي، الطلبات المُنشأة تُحفظ محليًا على هذا
-              المتصفح فقط وتظهر على اللوحة من هنا.
-            </p>
           </div>
         </div>
       </div>
@@ -150,6 +148,11 @@ export default function CreateRequestPage() {
       </PageHeader>
 
       <div className="container-page py-8">
+        {!isSupabaseEnabled && (
+          <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            قاعدة البيانات غير مُعدّة في هذه النسخة؛ إنشاء الطلبات يتطلب ضبط مفاتيح Supabase.
+          </div>
+        )}
         <div className="grid gap-8 lg:grid-cols-3">
           <form onSubmit={submit} noValidate className="space-y-5 lg:col-span-2">
             <Field label="اسم صاحب الطلب الكامل" error={errors.requesterFullName} htmlFor="name">
@@ -239,7 +242,11 @@ export default function CreateRequestPage() {
               {errors.consent && <p className="mt-1 text-sm text-blood-600">{errors.consent}</p>}
             </div>
 
-            <button type="submit" className="btn-primary w-full sm:w-auto">إنشاء الطلب</button>
+            {submitError && <p className="text-sm text-blood-600">{submitError}</p>}
+
+            <button type="submit" disabled={busy} className="btn-primary w-full sm:w-auto">
+              {busy ? "جارٍ الإنشاء…" : "إنشاء الطلب"}
+            </button>
           </form>
 
           <aside className="space-y-4">

@@ -1,17 +1,8 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
-import {
-  DemandBadge,
-  DemoBadge,
-  EmergencyNotice,
-  SafetyNotice,
-} from "@/components/ui";
-import { demandByGovernorate } from "@/data/demand";
-import { BLOOD_TYPES } from "@/lib/types";
+import { EmergencyNotice, SafetyNotice } from "@/components/ui";
 
 export default function HomePage() {
-  const overview = demandByGovernorate[0]; // عمّان كنظرة عامة تجريبية
-
   return (
     <div>
       {/* Hero */}
@@ -45,30 +36,19 @@ export default function HomePage() {
         <EmergencyNotice />
       </section>
 
-      {/* Blood demand overview */}
+      {/* Faz3tak */}
       <section className="container-page py-14">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="section-title">نظرة عامة على حالة الطلب</h2>
-            <p className="mt-1 text-slate-600 dark:text-slate-400">
-              مؤشر مبسّط حسب فصيلة الدم (مثال: محافظة {overview.governorate}).
-            </p>
+        <div className="rounded-2xl border border-blood-200 bg-blood-50/60 p-6 dark:border-blood-500/30 dark:bg-blood-500/5 sm:p-8">
+          <h2 className="section-title">فزعتك — طلبات دم للحالات داخل المستشفيات</h2>
+          <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
+            لوحة عامة لطلبات التبرع لحالات داخل المستشفيات: اطّلع على الطلب، توجّه
+            للمستشفى، وتبرّع باسم الحالة أو رقم الطلب. الفحص والقبول من خلال بنك الدم
+            أو المستشفى.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/faz3tak" className="btn-primary">تصفّح طلبات فزعتك</Link>
+            <Link href="/faz3tak/request" className="btn-secondary">أنشئ طلب فزعة</Link>
           </div>
-          <DemoBadge />
-        </div>
-
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {BLOOD_TYPES.map((bt) => (
-            <div key={bt} className="card flex flex-col items-center gap-2 text-center">
-              <span className="text-2xl font-extrabold text-blood-600">{bt}</span>
-              <DemandBadge status={overview.statuses[bt]} />
-            </div>
-          ))}
-        </div>
-        <div className="mt-4">
-          <Link href="/demand" className="text-sm font-semibold text-blood-600 hover:text-blood-700">
-            عرض كل المحافظات ←
-          </Link>
         </div>
       </section>
 

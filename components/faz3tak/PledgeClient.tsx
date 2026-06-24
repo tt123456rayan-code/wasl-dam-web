@@ -6,11 +6,12 @@ import {
   bloodTypeLabel,
   deriveStatus,
   isAcceptingPledges,
-  type BloodRequest,
+  type RequestView,
   type RequestBloodType,
 } from "@/lib/faz3tak";
 import { Faz3DemoBadge, Faz3EmergencyNotice } from "@/components/faz3tak/ui";
-import { addPledge, getRequest } from "@/lib/faz3tak-storage";
+import { getRequestView } from "@/lib/faz3tak-data";
+import { addPledge } from "@/lib/faz3tak-storage";
 import { BLOOD_TYPES, GOVERNORATES } from "@/lib/types";
 import { mapsSearchUrl } from "@/lib/utils";
 import { useNow } from "@/lib/useNow";
@@ -18,7 +19,7 @@ import { useNow } from "@/lib/useNow";
 const TIME_OPTIONS = ["في أقرب وقت", "صباحًا", "ظهرًا", "مساءً", "خلال اليومين القادمين"];
 
 export function PledgeClient({ requestId }: { requestId: string }) {
-  const [req, setReq] = useState<BloodRequest | null>(null);
+  const [req, setReq] = useState<RequestView | null>(null);
   const [loaded, setLoaded] = useState(false);
   const now = useNow();
 
@@ -31,15 +32,21 @@ export function PledgeClient({ requestId }: { requestId: string }) {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    setReq(getRequest(requestId) ?? null);
-    setLoaded(true);
+    let active = true;
+    getRequestView(requestId)
+      .then((r) => active && setReq(r))
+      .catch(() => {})
+      .finally(() => active && setLoaded(true));
+    return () => {
+      active = false;
+    };
   }, [requestId]);
 
   if (!loaded) {
     return <div className="container-page py-16 text-sm text-slate-500">جارٍ التحميل…</div>;
   }
 
-  if (!req || req.hidden) {
+  if (!req) {
     return (
       <div className="container-page py-16 text-center">
         <h1 className="text-2xl font-bold">الطلب غير متوفر</h1>
@@ -58,7 +65,7 @@ export function PledgeClient({ requestId }: { requestId: string }) {
         <p className="mt-2 text-slate-600 dark:text-slate-400">
           قد يكون الطلب قد اكتمل (تمت الفزعة) أو انتهت مدته أو أُغلق.
         </p>
-        <Link href={`/faz3tak/${req.id}`} className="btn-primary mt-6">عرض تفاصيل الطلب</Link>
+        <Link href={`/faz3tak/view?ref=${encodeURIComponent(req.id)}`} className="btn-primary mt-6">عرض تفاصيل الطلب</Link>
       </div>
     );
   }
@@ -117,7 +124,7 @@ export function PledgeClient({ requestId }: { requestId: string }) {
 
   return (
     <div className="container-page py-10">
-      <Link href={`/faz3tak/${req.id}`} className="text-sm font-semibold text-blood-600 hover:text-blood-700">
+      <Link href={`/faz3tak/view?ref=${encodeURIComponent(req.id)}`} className="text-sm font-semibold text-blood-600 hover:text-blood-700">
         → العودة لتفاصيل الطلب
       </Link>
       <div className="mt-4 max-w-xl">

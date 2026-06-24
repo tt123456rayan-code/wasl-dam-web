@@ -4,27 +4,42 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { Faz3DemoBadge, StatusBadge } from "@/components/faz3tak/ui";
-import { loadPledges, loadRequests } from "@/lib/faz3tak-storage";
+import { loadPledges } from "@/lib/faz3tak-storage";
+import { getRequestView } from "@/lib/faz3tak-data";
 import {
   deriveStatus,
   formatCountdown,
   remainingUnits,
-  type BloodRequest,
   type DonorIntent,
+  type RequestView,
 } from "@/lib/faz3tak";
 import { mapsSearchUrl } from "@/lib/utils";
 import { useNow } from "@/lib/useNow";
 
 export default function MyPledgesPage() {
   const [pledges, setPledges] = useState<DonorIntent[]>([]);
-  const [requests, setRequests] = useState<BloodRequest[]>([]);
+  const [requests, setRequests] = useState<Record<string, RequestView>>({});
   const [loaded, setLoaded] = useState(false);
   const now = useNow();
 
   useEffect(() => {
-    setPledges(loadPledges());
-    setRequests(loadRequests());
-    setLoaded(true);
+    let active = true;
+    const list = loadPledges();
+    setPledges(list);
+    const ids = Array.from(new Set(list.map((p) => p.requestId)));
+    Promise.all(ids.map((id) => getRequestView(id).catch(() => null)))
+      .then((views) => {
+        if (!active) return;
+        const map: Record<string, RequestView> = {};
+        views.forEach((v) => {
+          if (v) map[v.id] = v;
+        });
+        setRequests(map);
+      })
+      .finally(() => active && setLoaded(true));
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -40,17 +55,14 @@ export default function MyPledgesPage() {
         {!loaded ? (
           <p className="text-sm text-slate-500">جارٍ التحميل…</p>
         ) : pledges.length === 0 ? (
-          <EmptyState
-            title="لا توجد تبرعات مسجّلة"
-            message="عند تسجيل نية التبرع لأي طلب ستظهر هنا."
-          />
+          <EmptyState title="لا توجد تبرعات مسجّلة" message="عند تسجيل نية التبرع لأي طلب ستظهر هنا." />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {pledges
               .slice()
               .reverse()
               .map((p) => {
-                const req = requests.find((r) => r.id === p.requestId);
+                const req = requests[p.requestId];
                 const status = req && now !== null ? deriveStatus(req, now) : null;
                 return (
                   <article key={p.id} className="card">
@@ -66,21 +78,16 @@ export default function MyPledgesPage() {
                         <dl className="mt-1 space-y-0.5 text-sm text-slate-600 dark:text-slate-400">
                           <div>{req.governorate}</div>
                           <div>المتبقي حسب تحديث صاحب الطلب: <span className="font-semibold">{remainingUnits(req)}</span> وحدة</div>
-                          <div>
-                            الحالة الزمنية:{" "}
-                            {now !== null ? formatCountdown(now, req.expiry) : "…"}
-                          </div>
+                          <div>الحالة الزمنية: {now !== null ? formatCountdown(now, req.expiry) : "…"}</div>
                         </dl>
                         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                          <Link href={`/faz3tak/${req.id}`} className="btn-secondary flex-1">تفاصيل الطلب</Link>
-                          <a href={mapsSearchUrl(`${req.hospital} ${req.governorate}`)} target="_blank" rel="noopener noreferrer" className="btn-secondary flex-1">
-                            الاتجاهات
-                          </a>
+                          <Link href={`/faz3tak/view?ref=${encodeURIComponent(req.id)}`} className="btn-secondary flex-1">تفاصيل الطلب</Link>
+                          <a href={mapsSearchUrl(`${req.hospital} ${req.governorate}`)} target="_blank" rel="noopener noreferrer" className="btn-secondary flex-1">الاتجاهات</a>
                         </div>
                       </>
                     ) : (
                       <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                        لم يعد هذا الطلب متوفرًا على هذا المتصفح.
+                        لم يعد هذا الطلب متوفرًا.
                       </p>
                     )}
                   </article>

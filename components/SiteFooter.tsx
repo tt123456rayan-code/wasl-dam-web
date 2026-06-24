@@ -26,7 +26,6 @@ export function SiteFooter() {
               <li><Link href="/faz3tak" className="hover:text-blood-600">فزعتك — طلبات الحالات</Link></li>
               <li><Link href="/faq" className="hover:text-blood-600">الأسئلة الشائعة</Link></li>
               <li><Link href="/eligibility" className="hover:text-blood-600">الأهلية التوعوية</Link></li>
-              <li><Link href="/demand" className="hover:text-blood-600">حالة الطلب</Link></li>
               <li><Link href="/privacy" className="hover:text-blood-600">الخصوصية</Link></li>
               <li><Link href="/terms" className="hover:text-blood-600">الشروط وإخلاء المسؤولية</Link></li>
             </ul>

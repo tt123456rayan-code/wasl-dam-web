@@ -11,119 +11,135 @@ import {
 } from "@/components/faz3tak/ui";
 import {
   URGENCY_LABELS,
-  clampCompleted,
   deriveStatus,
   remainingUnits,
-  type BloodRequest,
   type ManualTerminalStatus,
-  type RequestUpdate,
-  type RequestUpdateType,
+  type RequestView,
   type UrgencyLevel,
 } from "@/lib/faz3tak";
-import { getRequest, pledgeCountFor, upsertRequest } from "@/lib/faz3tak-storage";
+import {
+  addNote,
+  extendExpiry,
+  getRequestView,
+  getUpdates,
+  setStatus,
+  setUrgency,
+  updateCount,
+  type UpdateRow,
+} from "@/lib/faz3tak-data";
+import { pledgeCountFor } from "@/lib/faz3tak-storage";
 import { formatArabicDateTime } from "@/lib/utils";
 
 const CONFIRM_TEXT =
   "أؤكد أنني تحققت من هذا التحديث مع الجهة الطبية أو من خلال الحالة.";
 
-let updateSeq = 0;
-function makeUpdate(type: RequestUpdateType, message: string): RequestUpdate {
-  updateSeq += 1;
-  return { id: `up-${Date.now()}-${updateSeq}`, at: new Date().toISOString(), type, message };
+function describeError(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes("unauthorized")) return "رمز الإدارة غير صحيح لهذا الطلب.";
+  return "تعذّر تنفيذ العملية. حاول لاحقًا.";
 }
 
 export default function ManagePage() {
   const [ref, setRef] = useState("");
   const [token, setToken] = useState("");
   const [authError, setAuthError] = useState("");
-  const [req, setReq] = useState<BloodRequest | null>(null);
+  const [req, setReq] = useState<RequestView | null>(null);
+  const [updates, setUpdates] = useState<UpdateRow[]>([]);
 
   const [countInput, setCountInput] = useState("");
   const [note, setNote] = useState("");
-  const [urgency, setUrgency] = useState<UrgencyLevel>("important");
+  const [urgency, setUrgencyState] = useState<UrgencyLevel>("important");
   const [expiry, setExpiry] = useState("");
   const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function authenticate(e: React.FormEvent) {
-    e.preventDefault();
-    const found = getRequest(ref.trim());
-    if (!found || found.token !== token.trim()) {
-      setAuthError("رقم الطلب أو رمز الإدارة غير صحيح.");
-      return;
+  async function refreshFrom(id: string) {
+    const [v, u] = await Promise.all([getRequestView(id), getUpdates(id)]);
+    setReq(v);
+    setUpdates(u);
+    if (v) {
+      setCountInput(String(v.unitsCompleted));
+      setUrgencyState(v.urgency);
     }
-    setAuthError("");
-    setReq(found);
-    setCountInput(String(found.unitsCompleted));
-    setUrgency(found.urgency);
   }
 
-  function persist(updated: BloodRequest, message: string) {
-    upsertRequest(updated);
-    setReq(updated);
-    setMsg(message);
+  async function authenticate(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError("");
+    setBusy(true);
+    try {
+      const v = await getRequestView(ref.trim());
+      if (!v) {
+        setAuthError("رقم الطلب غير موجود.");
+        return;
+      }
+      await refreshFrom(v.id);
+      setRef(v.id);
+    } catch {
+      setAuthError("تعذّر الوصول إلى قاعدة البيانات.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function flash(m: string) {
+    setMsg(m);
     setTimeout(() => setMsg(""), 4000);
+  }
+
+  async function run(action: () => Promise<void>, okMsg: string) {
+    if (!req) return;
+    setBusy(true);
+    try {
+      await action();
+      await refreshFrom(req.id);
+      flash(okMsg);
+    } catch (e) {
+      flash(describeError(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   function applyCount() {
     if (!req) return;
-    const target = req.unitsRequired;
-    const val = clampCompleted(Number(countInput), target);
     if (!window.confirm(CONFIRM_TEXT)) return;
-    const updates = [...req.updates, makeUpdate("countUpdated", `تم تحديث العدد إلى ${val} من ${target}`)];
-    if (val >= target) {
-      updates.push(makeUpdate("statusChanged", "تمت الفزعة — اكتمل الاحتياج"));
-    }
-    persist({ ...req, unitsCompleted: val, updates }, "تم تحديث عدد التبرعات.");
-    setCountInput(String(val));
-  }
-
-  function addNote() {
-    if (!req || note.trim().length < 3) return;
-    const updates = [...req.updates, makeUpdate("noteAdded", `ملاحظة من صاحب الطلب: ${note.trim()}`)];
-    persist({ ...req, updates }, "تمت إضافة الملاحظة.");
-    setNote("");
-  }
-
-  function changeUrgency() {
-    if (!req || urgency === req.urgency) return;
-    const updates = [...req.updates, makeUpdate("urgencyChanged", `تم تغيير مستوى الإلحاح إلى «${URGENCY_LABELS[urgency]}»`)];
-    persist({ ...req, urgency, updates }, "تم تحديث مستوى الإلحاح.");
-  }
-
-  function extendExpiry() {
-    if (!req || !expiry) return;
-    const t = new Date(expiry).getTime();
-    if (t <= Date.now() || t <= new Date(req.expiry).getTime()) {
-      setMsg("تاريخ التمديد يجب أن يكون في المستقبل وبعد التاريخ الحالي.");
-      return;
-    }
-    const updates = [...req.updates, makeUpdate("expiryExtended", `تم تمديد تاريخ الانتهاء إلى ${formatArabicDateTime(new Date(expiry).toISOString())}`)];
-    persist({ ...req, expiry: new Date(expiry).toISOString(), updates }, "تم تمديد تاريخ الانتهاء.");
-    setExpiry("");
+    void run(() => updateCount(req.id, token.trim(), Number(countInput)), "تم تحديث عدد التبرعات.");
   }
 
   function markComplete() {
     if (!req) return;
     if (!window.confirm(CONFIRM_TEXT)) return;
-    const target = req.unitsRequired;
-    const updates = [
-      ...req.updates,
-      makeUpdate("countUpdated", `تم تحديث العدد إلى ${target} من ${target}`),
-      makeUpdate("statusChanged", "تمت الفزعة — اكتمل الاحتياج"),
-    ];
-    persist({ ...req, unitsCompleted: target, updates }, "تمت الفزعة — أُغلق الطلب.");
-    setCountInput(String(target));
+    void run(() => updateCount(req.id, token.trim(), req.unitsRequired), "تمت الفزعة — أُغلق الطلب.");
+  }
+
+  function submitNote() {
+    if (!req || note.trim().length < 3) return;
+    void run(() => addNote(req.id, token.trim(), note.trim()), "تمت إضافة الملاحظة.").then(() => setNote(""));
+  }
+
+  function changeUrgency() {
+    if (!req) return;
+    void run(() => setUrgency(req.id, token.trim(), urgency), "تم تحديث مستوى الإلحاح.");
+  }
+
+  function doExtend() {
+    if (!req || !expiry) return;
+    const t = new Date(expiry).getTime();
+    if (t <= Date.now() || t <= new Date(req.expiry).getTime()) {
+      flash("تاريخ التمديد يجب أن يكون في المستقبل وبعد التاريخ الحالي.");
+      return;
+    }
+    void run(() => extendExpiry(req.id, token.trim(), new Date(expiry).toISOString()), "تم تمديد تاريخ الانتهاء.").then(() => setExpiry(""));
   }
 
   function markTerminal(kind: ManualTerminalStatus) {
     if (!req) return;
-    const label = kind === "closed" ? "أُغلق الطلب" : "لم يعد الطلب مطلوبًا";
+    const label = kind === "closed" ? "إغلاق الطلب" : "وضع علامة لم يعد مطلوبًا";
     if (!window.confirm(`${label}؟`)) return;
-    const updates = [...req.updates, makeUpdate("statusChanged", label)];
-    persist({ ...req, manualStatus: kind, updates }, label);
+    void run(() => setStatus(req.id, token.trim(), kind), label + " — تم.");
   }
 
-  // ===== شاشة الدخول =====
   if (!req) {
     return (
       <div>
@@ -137,25 +153,23 @@ export default function ManagePage() {
           <form onSubmit={authenticate} className="card mx-auto max-w-md space-y-4">
             <div>
               <label className="label" htmlFor="ref">رقم الطلب</label>
-              <input id="ref" className="input font-mono" placeholder="FZ-2026-1048" value={ref} onChange={(e) => setRef(e.target.value)} />
+              <input id="ref" className="input font-mono" placeholder="FZ-2026-1234" value={ref} onChange={(e) => setRef(e.target.value)} />
             </div>
             <div>
               <label className="label" htmlFor="tok">رمز الإدارة الخاص</label>
-              <input id="tok" className="input font-mono" placeholder="TK-XXXXXXXX" value={token} onChange={(e) => setToken(e.target.value)} />
+              <input id="tok" className="input font-mono" placeholder="الرمز الذي ظهر عند الإنشاء" value={token} onChange={(e) => setToken(e.target.value)} />
             </div>
             {authError && <p className="text-sm text-blood-600">{authError}</p>}
-            <button type="submit" className="btn-primary w-full">دخول</button>
-            <details className="text-xs text-slate-500 dark:text-slate-400">
-              <summary className="cursor-pointer">للتجربة على البيانات التجريبية</summary>
-              <p className="mt-2">جرّب الطلب <span className="font-mono">FZ-2026-1048</span> بالرمز <span className="font-mono">TK-DEMO1048</span>.</p>
-            </details>
+            <button type="submit" disabled={busy} className="btn-primary w-full">{busy ? "جارٍ التحقق…" : "دخول"}</button>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              يُتحقق من رمز الإدارة على الخادم عند كل تحديث؛ بدون الرمز الصحيح لا يمكن تعديل الطلب.
+            </p>
           </form>
         </div>
       </div>
     );
   }
 
-  // ===== لوحة الإدارة =====
   const status = deriveStatus(req, Date.now());
   const remaining = remainingUnits(req);
   const isComplete = req.unitsCompleted >= req.unitsRequired;
@@ -166,7 +180,7 @@ export default function ManagePage() {
     <div className="container-page py-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <Link href="/faz3tak" className="text-sm font-semibold text-blood-600 hover:text-blood-700">→ لوحة فزعتك</Link>
-        <button className="btn-secondary px-4 py-2 text-xs" onClick={() => setReq(null)}>تسجيل الخروج</button>
+        <button className="btn-secondary px-4 py-2 text-xs" onClick={() => { setReq(null); setToken(""); }}>خروج</button>
       </div>
 
       {isComplete && (
@@ -187,7 +201,7 @@ export default function ManagePage() {
       <h1 className="mt-2 text-2xl font-extrabold">{req.hospital} — {req.governorate}</h1>
 
       {msg && (
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-medium dark:border-slate-700 dark:bg-slate-900/40">
           {msg}
         </div>
       )}
@@ -198,7 +212,6 @@ export default function ManagePage() {
             <ProgressBlock required={req.unitsRequired} completed={req.unitsCompleted} />
           </div>
 
-          {/* Update completed count */}
           <div className="card">
             <h2 className="text-base font-bold">تحديث عدد التبرعات المكتملة</h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -208,38 +221,36 @@ export default function ManagePage() {
               <div>
                 <label className="label" htmlFor="count">العدد المكتمل</label>
                 <input id="count" type="number" min={0} max={req.unitsRequired} className="input w-32"
-                  value={countInput} disabled={!isActive && !isComplete}
-                  onChange={(e) => setCountInput(e.target.value)} />
+                  value={countInput} disabled={!isActive} onChange={(e) => setCountInput(e.target.value)} />
               </div>
-              <button className="btn-primary" onClick={applyCount} disabled={!isActive}>تأكيد التحديث</button>
-              {isActive && (
-                <button className="btn-secondary" onClick={markComplete}>وضع علامة «تمت الفزعة»</button>
-              )}
+              <button className="btn-primary" onClick={applyCount} disabled={!isActive || busy}>تأكيد التحديث</button>
+              {isActive && <button className="btn-secondary" onClick={markComplete} disabled={busy}>وضع علامة «تمت الفزعة»</button>}
             </div>
           </div>
 
-          {/* Public note */}
           <div className="card">
             <h2 className="text-base font-bold">إضافة ملاحظة عامة</h2>
-            <textarea className="input mt-3 min-h-20" value={note} onChange={(e) => setNote(e.target.value)}
-              placeholder="تحديث عام للحالة" disabled={!isActive} />
-            <button className="btn-secondary mt-3" onClick={addNote} disabled={!isActive || note.trim().length < 3}>إضافة الملاحظة</button>
+            <textarea className="input mt-3 min-h-20" value={note} onChange={(e) => setNote(e.target.value)} placeholder="تحديث عام للحالة" disabled={!isActive} />
+            <button className="btn-secondary mt-3" onClick={submitNote} disabled={!isActive || busy || note.trim().length < 3}>إضافة الملاحظة</button>
           </div>
 
-          {/* Activity history */}
           <div className="card">
             <h2 className="text-base font-bold">سجل النشاط</h2>
-            <ol className="mt-4 space-y-3">
-              {[...req.updates].reverse().map((u) => (
-                <li key={u.id} className="flex gap-3">
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blood-600" />
-                  <div>
-                    <p className="text-sm font-medium">{u.message}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{formatArabicDateTime(u.at)}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            {updates.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">لا توجد تحديثات بعد.</p>
+            ) : (
+              <ol className="mt-4 space-y-3">
+                {[...updates].reverse().map((u, i) => (
+                  <li key={`${u.at}-${i}`} className="flex gap-3">
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blood-600" />
+                    <div>
+                      <p className="text-sm font-medium">{u.message}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{formatArabicDateTime(u.at)}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
         </div>
 
@@ -247,12 +258,12 @@ export default function ManagePage() {
           <div className="card">
             <h2 className="text-base font-bold">مستوى الإلحاح</h2>
             <div className="mt-3 flex gap-2">
-              <select className="input" value={urgency} onChange={(e) => setUrgency(e.target.value as UrgencyLevel)} disabled={!isActive}>
+              <select className="input" value={urgency} onChange={(e) => setUrgencyState(e.target.value as UrgencyLevel)} disabled={!isActive}>
                 {(Object.keys(URGENCY_LABELS) as UrgencyLevel[]).map((u) => (
                   <option key={u} value={u}>{URGENCY_LABELS[u]}</option>
                 ))}
               </select>
-              <button className="btn-secondary" onClick={changeUrgency} disabled={!isActive}>تحديث</button>
+              <button className="btn-secondary" onClick={changeUrgency} disabled={!isActive || busy}>تحديث</button>
             </div>
           </div>
 
@@ -260,21 +271,21 @@ export default function ManagePage() {
             <h2 className="text-base font-bold">تمديد تاريخ الانتهاء</h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">متاح فقط أثناء نشاط الطلب.</p>
             <input type="datetime-local" className="input mt-3" value={expiry} onChange={(e) => setExpiry(e.target.value)} disabled={!isActive} />
-            <button className="btn-secondary mt-3" onClick={extendExpiry} disabled={!isActive || !expiry}>تمديد</button>
+            <button className="btn-secondary mt-3" onClick={doExtend} disabled={!isActive || busy || !expiry}>تمديد</button>
           </div>
 
           <div className="card">
             <h2 className="text-base font-bold">حالة الطلب</h2>
             <div className="mt-3 flex flex-col gap-2">
-              <button className="btn-secondary" onClick={() => markTerminal("closed")} disabled={isComplete}>مغلق</button>
-              <button className="btn-secondary" onClick={() => markTerminal("notNeeded")} disabled={isComplete}>لم يعد مطلوبًا</button>
+              <button className="btn-secondary" onClick={() => markTerminal("closed")} disabled={isComplete || busy}>مغلق</button>
+              <button className="btn-secondary" onClick={() => markTerminal("notNeeded")} disabled={isComplete || busy}>لم يعد مطلوبًا</button>
             </div>
           </div>
 
           <div className="card">
             <h2 className="text-base font-bold">نيّات التبرع</h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              عدد من سجّلوا نية التوجّه للتبرع (محلي فقط): <span className="font-bold">{pledges}</span>
+              عدد من سجّلوا نية التوجّه للتبرع (محلي على هذا المتصفح): <span className="font-bold">{pledges}</span>
             </p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               نيّات التبرع لا تغيّر عدد التبرعات المكتمل إطلاقًا؛ أنت من يحدّثه بعد التأكد.

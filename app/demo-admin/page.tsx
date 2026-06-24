@@ -1,52 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { DemandBadge } from "@/components/ui";
-import { demandByGovernorate as seedDemand } from "@/data/demand";
-import {
-  BLOOD_TYPES,
-  DEMAND_LABELS,
-  type DemandRecord,
-  type DemandStatus,
-} from "@/lib/types";
-import { readJSON, writeJSON, removeKey, STORAGE_KEYS } from "@/lib/storage";
+import { useState } from "react";
 
 const DEMO_PASSWORD = "demo1234";
-const DEMAND_OPTIONS: DemandStatus[] = ["available", "needed", "urgent"];
 
 export default function DemoAdminPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [pwd, setPwd] = useState("");
   const [pwdError, setPwdError] = useState(false);
-
-  const [demand, setDemand] = useState<DemandRecord[]>(seedDemand);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    setDemand(readJSON(STORAGE_KEYS.adminDemand, seedDemand));
-    setLoaded(true);
-  }, []);
-
-  function persistDemand(next: DemandRecord[]) {
-    setDemand(next);
-    writeJSON(STORAGE_KEYS.adminDemand, next);
-  }
-
-  function resetAll() {
-    removeKey(STORAGE_KEYS.adminDemand);
-    setDemand(seedDemand);
-  }
-
-  function tryUnlock(e: React.FormEvent) {
-    e.preventDefault();
-    if (pwd === DEMO_PASSWORD) {
-      setUnlocked(true);
-      setPwdError(false);
-    } else {
-      setPwdError(true);
-    }
-  }
 
   if (!unlocked) {
     return (
@@ -55,19 +17,20 @@ export default function DemoAdminPage() {
           <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
             لوحة تجريبية — غير مرتبطة بوزارة الصحة
           </div>
-          <form onSubmit={tryUnlock} className="card mt-5">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (pwd === DEMO_PASSWORD) setUnlocked(true);
+              else setPwdError(true);
+            }}
+            className="card mt-5"
+          >
             <h1 className="text-xl font-bold">الدخول للوحة التجريبية</h1>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              بوابة كلمة مرور تجريبية فقط (بدون مصادقة حقيقية). كلمة المرور:
+              بوابة كلمة مرور تجريبية فقط. كلمة المرور:
               <code className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 dark:bg-slate-800">demo1234</code>
             </p>
-            <input
-              type="password"
-              className="input mt-4"
-              placeholder="كلمة المرور التجريبية"
-              value={pwd}
-              onChange={(e) => setPwd(e.target.value)}
-            />
+            <input type="password" className="input mt-4" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="كلمة المرور التجريبية" />
             {pwdError && <p className="mt-1 text-sm text-blood-600">كلمة المرور غير صحيحة.</p>}
             <button type="submit" className="btn-primary mt-4 w-full">دخول</button>
           </form>
@@ -79,60 +42,20 @@ export default function DemoAdminPage() {
   return (
     <div className="container-page py-8">
       <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-        لوحة تجريبية — غير مرتبطة بوزارة الصحة. حالة الطلب أدناه بيانات تجريبية، وكل
-        التغييرات تبقى محليًا على متصفحك فقط ولا تُرسل لأي جهة.
+        لوحة تجريبية — لا تمثل جهة طبية ولا ترتبط بوزارة الصحة.
       </div>
-
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">إدارة حالة الطلب التجريبية</h1>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/demo-admin/faz3tak" className="btn-secondary">لوحة فزعتك التجريبية</Link>
-          <button onClick={resetAll} className="btn-secondary">إعادة ضبط البيانات التجريبية</button>
-        </div>
-      </div>
-
-      {!loaded ? (
-        <p className="mt-8 text-sm text-slate-500">جارٍ التحميل…</p>
-      ) : (
-        <div className="mt-6 space-y-6">
-          {demand.map((rec, ri) => (
-            <div key={rec.governorate} className="card">
-              <h2 className="text-lg font-bold">{rec.governorate}</h2>
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {BLOOD_TYPES.map((bt) => (
-                  <div key={bt} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-blood-600">{bt}</span>
-                      <DemandBadge status={rec.statuses[bt]} />
-                    </div>
-                    <select
-                      className="input mt-2 text-xs"
-                      value={rec.statuses[bt]}
-                      onChange={(e) => {
-                        const next = demand.map((r, i) =>
-                          i === ri
-                            ? { ...r, statuses: { ...r.statuses, [bt]: e.target.value as DemandStatus } }
-                            : r
-                        );
-                        persistDemand(next);
-                      }}
-                    >
-                      {DEMAND_OPTIONS.map((o) => (
-                        <option key={o} value={o}>{DEMAND_LABELS[o]}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <p className="mt-8 text-xs text-slate-500 dark:text-slate-400">
-        هذه ليست لوحة إنتاج حقيقية. الغرض منها العرض والاختبار فقط، وكل التعديلات
-        محفوظة محليًا في متصفحك.
+      <h1 className="mt-6 text-2xl font-bold">اللوحة التجريبية</h1>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+        أدوات إشراف تجريبية للنموذج.
       </p>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <Link href="/demo-admin/faz3tak" className="card hover:border-blood-300 hover:shadow-md">
+          <h2 className="text-base font-bold">إشراف فزعتك</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            استعراض طلبات فزعتك الحقيقية من قاعدة البيانات.
+          </p>
+        </Link>
+      </div>
     </div>
   );
 }
