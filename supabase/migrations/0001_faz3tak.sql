@@ -215,5 +215,17 @@ grant execute on function faz3_extend_expiry(text,text,timestamptz) to anon, aut
 grant execute on function faz3_set_status(text,text,faz3_manual_status) to anon, authenticated;
 grant execute on function faz3_add_report(text,text) to anon, authenticated;
 
+-- RPC: قراءة سجل التحديثات للطلبات غير المخفيّة (يتجاوز RLS بأمان)
+create or replace function faz3_get_updates(p_ref text)
+returns table(at timestamptz, type text, message text)
+language sql security definer set search_path = public, extensions as $$
+  select u.at, u.type, u.message
+  from faz3_updates u
+  join faz3_requests r on r.id = u.request_id
+  where u.request_id = p_ref and r.hidden = false
+  order by u.at;
+$$;
+grant execute on function faz3_get_updates(text) to anon, authenticated;
+
 -- ملاحظة: إجراءات الإشراف (إخفاء/إزالة) لا تُمنح لـ anon عمدًا؛
 -- تُنفَّذ عبر مفتاح خدمة (service_role) من بيئة آمنة فقط — وليس من المتصفح.
