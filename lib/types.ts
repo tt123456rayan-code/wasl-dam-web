@@ -48,18 +48,12 @@ export interface Center {
   id: string;
   name: string;
   governorate: string;
-  address: string;
-  /** نص ساعات العمل للعرض */
-  hours: string;
-  /** أيام العمل: 0 الأحد ... 6 السبت (متوافق مع Date.getDay) */
-  openDays: number[];
-  /** ساعة الفتح (0-23) */
-  openFrom: number;
-  /** ساعة الإغلاق (0-23) */
-  openTo: number;
-  services: string[];
-  source: string;
-  lastUpdated: string;
+  /** نوع المرفق (بنك دم وطني / مستشفى حكومي / مستشفى جامعي ...) */
+  kind: string;
+  /** ملاحظة/إرشاد للمستخدم */
+  note: string;
+  /** عبارة البحث على خرائط Google للوصول للموقع الحقيقي والمحدّث */
+  mapsQuery: string;
 }
 
 export interface Campaign {

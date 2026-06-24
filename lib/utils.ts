@@ -1,4 +1,4 @@
-import type { Campaign, CampaignStatus, Center, DemandStatus } from "@/lib/types";
+import type { Campaign, CampaignStatus, DemandStatus } from "@/lib/types";
 
 export function cn(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
@@ -65,17 +65,6 @@ export function getCampaignStatus(
   if (nowMs < start) return "upcoming";
   if (nowMs > end) return "ended";
   return "active";
-}
-
-/** يحدد إن كان المركز مفتوحًا الآن بناءً على أيام/ساعات العمل التجريبية */
-export function isCenterOpenNow(
-  center: Pick<Center, "openDays" | "openFrom" | "openTo">,
-  now: Date
-): boolean {
-  const day = now.getDay();
-  if (!center.openDays.includes(day)) return false;
-  const hour = now.getHours() + now.getMinutes() / 60;
-  return hour >= center.openFrom && hour < center.openTo;
 }
 
 export const demandStyles: Record<

@@ -217,12 +217,12 @@ export default function DemoAdminPage() {
                 />
               </label>
               <label className="mt-3 block text-sm">
-                <span className="label">العنوان</span>
+                <span className="label">ملاحظة</span>
                 <input
                   className="input"
-                  value={c.address}
+                  value={c.note}
                   onChange={(e) =>
-                    persistCenters(centers.map((x, i) => (i === ci ? { ...x, address: e.target.value } : x)))
+                    persistCenters(centers.map((x, i) => (i === ci ? { ...x, note: e.target.value } : x)))
                   }
                 />
               </label>
