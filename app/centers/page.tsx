@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { PageHeader, DemoBadge, EmptyState, SourceLine } from "@/components/ui";
+import { OfficialCentersFinder } from "@/components/OfficialCentersFinder";
 import { ReportButton } from "@/components/ReportButton";
 import { centers } from "@/data/centers";
 import { GOVERNORATES } from "@/lib/types";
@@ -30,12 +31,22 @@ export default function CentersPage() {
     <div>
       <PageHeader
         title="مراكز التبرع"
-        subtitle="ابحث عن مراكز التبرع حسب الاسم أو المحافظة. جميع المراكز المعروضة بيانات تجريبية لأغراض العرض وليست بيانات رسمية."
+        subtitle="استخدم أداة البحث الحيّة في الأعلى للعثور على مراكز التبرع الحقيقية عبر مصادر رسمية، أو تصفّح الأمثلة التجريبية أدناه لمعاينة شكل المنصة."
       >
         <DemoBadge />
       </PageHeader>
 
       <div className="container-page py-8">
+        <OfficialCentersFinder />
+
+        <div className="mt-8 flex flex-wrap items-center gap-2">
+          <h2 className="text-lg font-bold">أمثلة تجريبية للعرض</h2>
+          <DemoBadge />
+        </div>
+        <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
+          المراكز أدناه بيانات تجريبية خيالية لعرض شكل المنصة فقط — وليست مراكز حقيقية.
+        </p>
+
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="sm:col-span-2">
             <label className="label" htmlFor="search">ابحث باسم المركز أو العنوان</label>
