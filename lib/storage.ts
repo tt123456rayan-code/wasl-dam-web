@@ -8,6 +8,10 @@ export const STORAGE_KEYS = {
   adminCampaigns: "wasl-dam:admin-campaigns",
   adminCenters: "wasl-dam:admin-centers",
   adminDemand: "wasl-dam:admin-demand",
+  faz3Requests: "wasl-dam:faz3:requests",
+  faz3Pledges: "wasl-dam:faz3:pledges",
+  faz3Reports: "wasl-dam:faz3:reports",
+  faz3Moderation: "wasl-dam:faz3:moderation",
 } as const;
 
 // كل مفاتيح التخزين المحلية للنموذج التجريبي (تُستخدم في حذف البيانات المحلية)
@@ -18,6 +22,10 @@ export const ALL_STORAGE_KEYS: string[] = [
   "wasl-dam:admin-campaigns",
   "wasl-dam:admin-centers",
   "wasl-dam:admin-demand",
+  "wasl-dam:faz3:requests",
+  "wasl-dam:faz3:pledges",
+  "wasl-dam:faz3:reports",
+  "wasl-dam:faz3:moderation",
   "wasl-dam:theme",
 ];
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DemandBadge } from "@/components/ui";
 import { demandByGovernorate as seedDemand } from "@/data/demand";
@@ -84,7 +85,10 @@ export default function DemoAdminPage() {
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">إدارة حالة الطلب التجريبية</h1>
-        <button onClick={resetAll} className="btn-secondary">إعادة ضبط البيانات التجريبية</button>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/demo-admin/faz3tak" className="btn-secondary">لوحة فزعتك التجريبية</Link>
+          <button onClick={resetAll} className="btn-secondary">إعادة ضبط البيانات التجريبية</button>
+        </div>
       </div>
 
       {!loaded ? (
