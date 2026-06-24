@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/", label: "الرئيسية" },
+  { href: "/faz3tak", label: "فزعتك" },
   { href: "/centers", label: "المراكز" },
   { href: "/campaigns", label: "الحملات" },
   { href: "/demand", label: "حالة الطلب" },

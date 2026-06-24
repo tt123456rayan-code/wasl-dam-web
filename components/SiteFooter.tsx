@@ -23,6 +23,7 @@ export function SiteFooter() {
           <div>
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">روابط</h3>
             <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+              <li><Link href="/faz3tak" className="hover:text-blood-600">فزعتك — طلبات الحالات</Link></li>
               <li><Link href="/faq" className="hover:text-blood-600">الأسئلة الشائعة</Link></li>
               <li><Link href="/eligibility" className="hover:text-blood-600">الأهلية التوعوية</Link></li>
               <li><Link href="/demand" className="hover:text-blood-600">حالة الطلب</Link></li>
