@@ -73,6 +73,7 @@ export default function Faz3takBoardPage() {
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/faz3tak/request" className="btn-primary">أنشئ طلب فزعة</Link>
+            <Link href="/faz3tak/subscribe" className="btn-secondary">اشترك بالإشعارات</Link>
             <Link href="/faz3tak/manage" className="btn-secondary">إدارة طلبي</Link>
             <Link href="/faz3tak/my-pledges" className="btn-secondary">تبرعاتي المسجّلة</Link>
           </div>
