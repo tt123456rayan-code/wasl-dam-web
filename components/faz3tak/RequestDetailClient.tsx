@@ -7,9 +7,8 @@ import {
   deriveStatus,
   formatCountdown,
   isAcceptingPledges,
-  requesterDisplayName,
   remainingUnits,
-  type BloodRequest,
+  type RequestView,
 } from "@/lib/faz3tak";
 import {
   Faz3DemoBadge,
@@ -20,31 +19,41 @@ import {
   UrgencyBadge,
 } from "@/components/faz3tak/ui";
 import { ReportRequest } from "@/components/faz3tak/ReportRequest";
-import { getRequest } from "@/lib/faz3tak-storage";
+import { getRequestView, getUpdates, type UpdateRow } from "@/lib/faz3tak-data";
 import { formatArabicDateTime, mapsSearchUrl } from "@/lib/utils";
 import { useNow } from "@/lib/useNow";
 
 export function RequestDetailClient({ requestId }: { requestId: string }) {
-  const [req, setReq] = useState<BloodRequest | null>(null);
+  const [req, setReq] = useState<RequestView | null>(null);
+  const [updates, setUpdates] = useState<UpdateRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const now = useNow();
 
   useEffect(() => {
-    setReq(getRequest(requestId) ?? null);
-    setLoaded(true);
+    let active = true;
+    Promise.all([getRequestView(requestId), getUpdates(requestId)])
+      .then(([r, u]) => {
+        if (!active) return;
+        setReq(r);
+        setUpdates(u);
+      })
+      .catch(() => {})
+      .finally(() => active && setLoaded(true));
+    return () => {
+      active = false;
+    };
   }, [requestId]);
 
   if (!loaded) {
     return <div className="container-page py-16 text-sm text-slate-500">جارٍ التحميل…</div>;
   }
 
-  if (!req || req.hidden) {
+  if (!req) {
     return (
       <div className="container-page py-16 text-center">
         <h1 className="text-2xl font-bold">الطلب غير متوفر</h1>
         <p className="mt-2 text-slate-600 dark:text-slate-400">
-          قد يكون الطلب غير موجود على هذا المتصفح أو تمّت إزالته. الطلبات المُنشأة
-          محليًا تظهر فقط على المتصفح الذي أنشأها في هذا النموذج التجريبي.
+          قد يكون الطلب غير موجود أو تمّت إزالته.
         </p>
         <Link href="/faz3tak" className="btn-primary mt-6">العودة إلى لوحة فزعتك</Link>
       </div>
@@ -54,9 +63,6 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
   const status = now !== null ? deriveStatus(req, now) : "needsDonors";
   const accepting = now !== null && isAcceptingPledges(status);
   const remaining = remainingUnits(req);
-  const sortedUpdates = [...req.updates].sort(
-    (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()
-  );
 
   return (
     <div className="container-page py-10">
@@ -75,9 +81,7 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
               {now !== null && <StatusBadge status={status} />}
               <Faz3DemoBadge />
             </div>
-            <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
-              {requesterDisplayName(req)}
-            </h1>
+            <h1 className="mt-3 text-3xl font-extrabold tracking-tight">{req.displayName}</h1>
             <p className="mt-2 text-slate-600 dark:text-slate-400">{req.publicMessage}</p>
           </div>
 
@@ -86,15 +90,9 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
             <Detail label="المحافظة" value={req.governorate} />
             <Detail label="الفصيلة المطلوبة" value={bloodTypeLabel(req.bloodType)} />
             <Detail label="عدد الوحدات المطلوبة" value={`${req.unitsRequired} وحدة`} />
-            <Detail
-              label="تم التبرع للحالة حسب تحديث صاحب الطلب"
-              value={`${req.unitsCompleted} وحدة`}
-            />
+            <Detail label="تم التبرع للحالة حسب تحديث صاحب الطلب" value={`${req.unitsCompleted} وحدة`} />
             <Detail label="المتبقي حسب تحديث صاحب الطلب" value={`${remaining} وحدة`} />
-            <Detail
-              label="تنتهي خلال"
-              value={now !== null ? formatCountdown(now, req.expiry) : "…"}
-            />
+            <Detail label="تنتهي خلال" value={now !== null ? formatCountdown(now, req.expiry) : "…"} />
             <Detail label="تاريخ الانتهاء" value={formatArabicDateTime(req.expiry)} />
           </dl>
 
@@ -109,22 +107,23 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
             </p>
           </div>
 
-          {/* Activity timeline */}
           <div className="card">
             <h2 className="text-base font-bold">سجل التحديثات</h2>
-            <ol className="mt-4 space-y-4">
-              {sortedUpdates.map((u) => (
-                <li key={u.id} className="flex gap-3">
-                  <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-blood-600" />
-                  <div>
-                    <p className="text-sm font-medium">{u.message}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {formatArabicDateTime(u.at)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            {updates.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">لا توجد تحديثات بعد.</p>
+            ) : (
+              <ol className="mt-4 space-y-4">
+                {updates.map((u, i) => (
+                  <li key={`${u.at}-${i}`} className="flex gap-3">
+                    <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-blood-600" />
+                    <div>
+                      <p className="text-sm font-medium">{u.message}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{formatArabicDateTime(u.at)}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
         </div>
 
@@ -136,7 +135,7 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
             </p>
             <div className="mt-4 space-y-2">
               {accepting ? (
-                <Link href={`/faz3tak/${req.id}/pledge`} className="btn-primary w-full">
+                <Link href={`/faz3tak/pledge?ref=${encodeURIComponent(req.id)}`} className="btn-primary w-full">
                   سأتوجه للتبرع
                 </Link>
               ) : (

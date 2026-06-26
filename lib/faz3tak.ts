@@ -117,6 +117,24 @@ export interface AuditLogEntry {
   description: string;
 }
 
+// نموذج موحّد للعرض العام (من Supabase view أو محليًا)
+export interface RequestView {
+  id: string;
+  createdAt: string;
+  displayName: string;
+  privacyMode: RequesterPrivacyMode;
+  hospital: string;
+  governorate: string;
+  bloodType: RequestBloodType;
+  unitsRequired: number;
+  unitsCompleted: number;
+  urgency: UrgencyLevel;
+  expiry: string;
+  publicMessage: string;
+  manualStatus: ManualTerminalStatus | null;
+  isDemo: boolean;
+}
+
 // ===== أدوات مساعدة =====
 
 export function bloodTypeLabel(bt: RequestBloodType): string {
@@ -139,10 +157,12 @@ export function progressPercent(req: Pick<BloodRequest, "unitsRequired" | "units
 
 // تُحسب الحالة تلقائيًا من العدد والتاريخ والحالة اليدوية
 export function deriveStatus(
-  req: Pick<
-    BloodRequest,
-    "unitsRequired" | "unitsCompleted" | "manualStatus" | "expiry"
-  >,
+  req: {
+    unitsRequired: number;
+    unitsCompleted: number;
+    manualStatus?: ManualTerminalStatus | null;
+    expiry: string;
+  },
   nowMs: number
 ): RequestStatus {
   if (req.unitsCompleted >= req.unitsRequired) return "completed";

@@ -6,18 +6,16 @@ import {
   deriveStatus,
   formatCountdown,
   isAcceptingPledges,
-  requesterDisplayName,
-  type BloodRequest,
+  type RequestView,
 } from "@/lib/faz3tak";
 import { StatusBadge, UrgencyBadge, ProgressBlock } from "@/components/faz3tak/ui";
-import { formatArabicDateTime, mapsSearchUrl } from "@/lib/utils";
+import { mapsSearchUrl } from "@/lib/utils";
 import { useNow } from "@/lib/useNow";
 
-export function RequestCard({ req }: { req: BloodRequest }) {
+export function RequestCard({ req }: { req: RequestView }) {
   const now = useNow();
   const status = now !== null ? deriveStatus(req, now) : "needsDonors";
   const accepting = now !== null && isAcceptingPledges(status);
-  const lastUpdate = req.updates[req.updates.length - 1];
 
   return (
     <article className="card flex flex-col">
@@ -31,7 +29,7 @@ export function RequestCard({ req }: { req: BloodRequest }) {
         </div>
       </div>
 
-      <h3 className="mt-3 text-lg font-bold">{requesterDisplayName(req)}</h3>
+      <h3 className="mt-3 text-lg font-bold">{req.displayName}</h3>
       <dl className="mt-1 space-y-0.5 text-sm text-slate-600 dark:text-slate-400">
         <div>{req.hospital} — {req.governorate}</div>
         <div>الفصيلة المطلوبة: <span className="font-semibold text-blood-700 dark:text-blood-300">{bloodTypeLabel(req.bloodType)}</span></div>
@@ -43,13 +41,10 @@ export function RequestCard({ req }: { req: BloodRequest }) {
 
       <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
         تنتهي خلال: {now !== null ? formatCountdown(now, req.expiry) : "…"}
-        {lastUpdate && (
-          <> · آخر تحديث من صاحب الطلب: {formatArabicDateTime(lastUpdate.at)}</>
-        )}
       </p>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-        <Link href={`/faz3tak/${req.id}`} className="btn-secondary flex-1">
+        <Link href={`/faz3tak/view?ref=${encodeURIComponent(req.id)}`} className="btn-secondary flex-1">
           تفاصيل الطلب
         </Link>
         <a
@@ -64,7 +59,7 @@ export function RequestCard({ req }: { req: BloodRequest }) {
 
       <div className="mt-2">
         {accepting ? (
-          <Link href={`/faz3tak/${req.id}/pledge`} className="btn-primary w-full">
+          <Link href={`/faz3tak/pledge?ref=${encodeURIComponent(req.id)}`} className="btn-primary w-full">
             سأتوجه للتبرع
           </Link>
         ) : (

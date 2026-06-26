@@ -12,7 +12,6 @@ const nav = [
   { href: "/faz3tak", label: "فزعتك" },
   { href: "/centers", label: "المراكز" },
   { href: "/campaigns", label: "الحملات" },
-  { href: "/demand", label: "حالة الطلب" },
   { href: "/ready", label: "سجّل نيتك" },
   { href: "/eligibility", label: "الأهلية" },
   { href: "/faq", label: "الأسئلة" },

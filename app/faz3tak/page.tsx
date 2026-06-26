@@ -9,22 +9,23 @@ import {
   Faz3MedicalNotice,
 } from "@/components/faz3tak/ui";
 import { RequestCard } from "@/components/faz3tak/RequestCard";
-import { loadRequests } from "@/lib/faz3tak-storage";
+import { isSupabaseEnabled, listRequests } from "@/lib/faz3tak-data";
 import {
   STATUS_LABELS,
   URGENCY_LABELS,
   deriveStatus,
-  type BloodRequest,
-  type RequestStatus,
   type RequestBloodType,
+  type RequestStatus,
+  type RequestView,
   type UrgencyLevel,
 } from "@/lib/faz3tak";
 import { BLOOD_TYPES, GOVERNORATES } from "@/lib/types";
 import { useNow } from "@/lib/useNow";
 
 export default function Faz3takBoardPage() {
-  const [requests, setRequests] = useState<BloodRequest[]>([]);
+  const [requests, setRequests] = useState<RequestView[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
   const now = useNow();
 
   const [gov, setGov] = useState("");
@@ -33,8 +34,16 @@ export default function Faz3takBoardPage() {
   const [status, setStatus] = useState<"" | RequestStatus>("");
 
   useEffect(() => {
-    setRequests(loadRequests().filter((r) => !r.hidden));
-    setLoaded(true);
+    let active = true;
+    listRequests()
+      .then((rows) => {
+        if (active) setRequests(rows);
+      })
+      .catch(() => active && setError(true))
+      .finally(() => active && setLoaded(true));
+    return () => {
+      active = false;
+    };
   }, []);
 
   const results = useMemo(() => {
@@ -42,15 +51,13 @@ export default function Faz3takBoardPage() {
       const mg = gov === "" || r.governorate === gov;
       const mb = bt === "" || r.bloodType === bt;
       const mu = urgency === "" || r.urgency === urgency;
-      const ms =
-        status === "" || (now !== null && deriveStatus(r, now) === status);
+      const ms = status === "" || (now !== null && deriveStatus(r, now) === status);
       return mg && mb && mu && ms;
     });
   }, [requests, gov, bt, urgency, status, now]);
 
   return (
     <div>
-      {/* Hero */}
       <section className="border-b border-slate-200 bg-gradient-to-b from-blood-50/60 to-white dark:border-slate-800 dark:from-blood-900/10 dark:to-slate-950">
         <div className="container-page py-12 sm:py-16">
           <Faz3DemoBadge />
@@ -75,7 +82,13 @@ export default function Faz3takBoardPage() {
       <div className="container-page space-y-6 py-8">
         <Faz3EmergencyNotice />
 
-        {/* Filters */}
+        {!isSupabaseEnabled && (
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            قاعدة البيانات غير مُعدّة في هذه النسخة (لم تُضبط مفاتيح Supabase)، لذا لا
+            تظهر طلبات. بعد ضبط المفاتيح ستظهر الطلبات الحقيقية هنا.
+          </div>
+        )}
+
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="label" htmlFor="gov">المحافظة</label>
@@ -113,19 +126,16 @@ export default function Faz3takBoardPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            النتائج: {results.length} طلب
-          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">النتائج: {results.length} طلب</p>
           <Faz3DemoBadge />
         </div>
 
         {!loaded ? (
           <p className="text-sm text-slate-500">جارٍ التحميل…</p>
+        ) : error ? (
+          <EmptyState title="تعذّر تحميل الطلبات" message="حدث خطأ في الاتصال بقاعدة البيانات. حاول لاحقًا." />
         ) : results.length === 0 ? (
-          <EmptyState
-            title="لا توجد طلبات مطابقة"
-            message="جرّب تغيير الفلاتر، أو أنشئ طلب فزعة جديدًا."
-          />
+          <EmptyState title="لا توجد طلبات مطابقة" message="جرّب تغيير الفلاتر، أو أنشئ طلب فزعة جديدًا." />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {results.map((r) => (

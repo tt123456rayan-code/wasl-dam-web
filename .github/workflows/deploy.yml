@@ -32,6 +32,12 @@ jobs:
 
       - name: Build static site
         run: npm run build
+        env:
+          # المفتاح القابل للنشر (publishable) عام بطبيعته ويُشحن في حزمة المتصفح؛
+          # الأمان يعتمد على RLS. يمكن تجاوز القيم عبر Repository Variables.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://nqlvdikrctwndtkrdmae.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_KkXTKi_ypYjaT_dxDiTL9g_FZfQ0VaV' }}
+          NEXT_PUBLIC_CONTACT_EMAIL: ${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
