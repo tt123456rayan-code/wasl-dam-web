@@ -20,7 +20,7 @@ import {
   DbNotConfiguredError,
   isSupabaseEnabled,
 } from "@/lib/faz3tak-data";
-import { centers } from "@/data/centers";
+import { hospitals, hospitalsByGovernorate } from "@/data/hospitals";
 import { BLOOD_TYPES, GOVERNORATES } from "@/lib/types";
 
 interface FormState {
@@ -58,7 +58,9 @@ export default function CreateRequestPage() {
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const hospitalNames = Array.from(new Set(centers.map((c) => c.name)));
+  const filteredHospitals = form.governorate
+    ? hospitalsByGovernorate(form.governorate)
+    : hospitals;
 
   function validate(): boolean {
     const e: Record<string, string> = {};
@@ -175,18 +177,10 @@ export default function CreateRequestPage() {
                 onChange={(e) => setForm({ ...form, requesterMobile: e.target.value })} />
             </Field>
 
-            <Field label="اسم المستشفى" error={errors.hospital} htmlFor="hospital">
-              <input id="hospital" list="hospitals" className="input" value={form.hospital}
-                onChange={(e) => setForm({ ...form, hospital: e.target.value })} />
-              <datalist id="hospitals">
-                {hospitalNames.map((h) => <option key={h} value={h} />)}
-              </datalist>
-            </Field>
-
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="المحافظة" error={errors.governorate} htmlFor="gov">
                 <select id="gov" className="input" value={form.governorate}
-                  onChange={(e) => setForm({ ...form, governorate: e.target.value })}>
+                  onChange={(e) => setForm({ ...form, governorate: e.target.value, hospital: "" })}>
                   <option value="">اختر المحافظة</option>
                   {GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
                 </select>
@@ -200,6 +194,23 @@ export default function CreateRequestPage() {
                 </select>
               </Field>
             </div>
+
+            <Field label="المنشأة الطبية (المستشفى / المركز)" error={errors.hospital} htmlFor="hospital">
+              <select id="hospital" className="input" value={form.hospital}
+                onChange={(e) => setForm({ ...form, hospital: e.target.value })}>
+                <option value="">
+                  {form.governorate ? "اختر المنشأة الطبية" : "اختر المحافظة أولًا"}
+                </option>
+                {filteredHospitals.map((h) => (
+                  <option key={h.name} value={h.name}>
+                    {h.name} ({h.type})
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                إن لم تجد المنشأة، اختر أقرب خيار أو تواصل معنا لإضافتها.
+              </p>
+            </Field>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="عدد الوحدات المطلوبة" error={errors.unitsRequired} htmlFor="units">
